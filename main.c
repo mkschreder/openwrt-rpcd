@@ -36,6 +36,7 @@ static void
 handle_signal(int sig)
 {
 	rpc_session_freeze();
+	//printf("Got signal %d\n", sig); 
 	uloop_cancelled = true;
 	respawn = (sig == SIGHUP);
 }
@@ -82,7 +83,8 @@ int main(int argc, char **argv)
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGHUP,  handle_signal);
 	signal(SIGUSR1, handle_signal);
-
+	signal(SIGINT, handle_signal); 
+	
 	uloop_init();
 
 	ctx = ubus_connect(ubus_socket);
@@ -105,9 +107,16 @@ int main(int argc, char **argv)
 		rpc_session_thaw();
 
 	uloop_run();
+
+	printf("clean: uci..\n"); 
+	rpc_uci_api_destroy(); 
+	printf("clean: session\n"); 
+	rpc_session_api_destroy(); 
+	printf("clean: plugin\n");
+	rpc_plugin_api_destroy(); 
 	ubus_free(ctx);
 	uloop_done();
-
+	
 	if (respawn)
 		exec_self(argc, argv);
 
