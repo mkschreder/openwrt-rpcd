@@ -17,6 +17,7 @@
  */
 
 #include <rpcd/plugin.h>
+#include <json-c/json.h>
 
 static struct blob_buf buf;
 
@@ -326,7 +327,6 @@ rpc_plugin_parse_exec(const char *name, int fd)
 
 	if (asprintf((char **)&obj_type->name, "luci-rpc-plugin-%s", name) < 0)
 		return NULL;
-
 	obj_type->methods = methods;
 	obj_type->n_methods = n_method;
 
@@ -468,4 +468,8 @@ int rpc_plugin_api_init(struct ubus_context *ctx)
 	}
 
 	return rv;
+}
+
+void rpc_plugin_api_destroy(void){
+
 }
