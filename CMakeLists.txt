@@ -39,12 +39,12 @@ IF(FILE_SUPPORT)
   SET_TARGET_PROPERTIES(file_plugin PROPERTIES OUTPUT_NAME file PREFIX "")
 ENDIF()
 
-IF (IWINFO_SUPPORT)
-  SET(PLUGINS ${PLUGINS} iwinfo_plugin)
-  ADD_LIBRARY(iwinfo_plugin MODULE iwinfo.c)
-  TARGET_LINK_LIBRARIES(iwinfo_plugin ubox ubus iwinfo)
-  SET_TARGET_PROPERTIES(iwinfo_plugin PROPERTIES OUTPUT_NAME iwinfo PREFIX "")
-ENDIF()
+#IF (IWINFO_SUPPORT)
+#  SET(PLUGINS ${PLUGINS} iwinfo_plugin)
+#  ADD_LIBRARY(iwinfo_plugin MODULE iwinfo.c)
+#  TARGET_LINK_LIBRARIES(iwinfo_plugin ubox ubus iwinfo)
+#  SET_TARGET_PROPERTIES(iwinfo_plugin PROPERTIES OUTPUT_NAME iwinfo PREFIX "")
+#ENDIF()
 
 INSTALL(TARGETS rpcd ${PLUGINS}
 	RUNTIME DESTINATION sbin

@@ -65,6 +65,7 @@ struct rpc_session_acl {
 };
 
 int rpc_session_api_init(struct ubus_context *ctx);
+void rpc_session_api_destroy(void); 
 
 bool rpc_session_access(const char *sid, const char *scope,
                         const char *object, const char *function);

@@ -62,5 +62,5 @@ struct rpc_plugin {
 };
 
 int rpc_plugin_api_init(struct ubus_context *ctx);
-
+void rpc_plugin_api_destroy(void); 
 #endif

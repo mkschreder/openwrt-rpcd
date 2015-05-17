@@ -218,34 +218,35 @@ rpc_session_dump_acls(struct rpc_session *ses, struct blob_buf *b)
 }
 
 static void
-rpc_session_to_blob(struct rpc_session *ses, bool acls)
+rpc_session_to_blob(struct rpc_session *ses, struct blob_buf *buf, bool acls)
 {
 	void *c;
 
-	blob_buf_init(&buf, 0);
 
-	blobmsg_add_string(&buf, "ubus_rpc_session", ses->id);
-	blobmsg_add_u32(&buf, "timeout", ses->timeout);
-	blobmsg_add_u32(&buf, "expires", uloop_timeout_remaining(&ses->t) / 1000);
+	blobmsg_add_string(buf, "ubus_rpc_session", ses->id);
+	blobmsg_add_u32(buf, "timeout", ses->timeout);
+	blobmsg_add_u32(buf, "expires", uloop_timeout_remaining(&ses->t) / 1000);
 
 	if (acls) {
-		c = blobmsg_open_table(&buf, "acls");
-		rpc_session_dump_acls(ses, &buf);
-		blobmsg_close_table(&buf, c);
+		c = blobmsg_open_table(buf, "acls");
+		rpc_session_dump_acls(ses, buf);
+		blobmsg_close_table(buf, c);
 	}
 
-	c = blobmsg_open_table(&buf, "data");
-	rpc_session_dump_data(ses, &buf);
-	blobmsg_close_table(&buf, c);
+	c = blobmsg_open_table(buf, "data");
+	rpc_session_dump_data(ses, buf);
+	blobmsg_close_table(buf, c);
 }
 
 static void
 rpc_session_dump(struct rpc_session *ses, struct ubus_context *ctx,
                  struct ubus_request_data *req)
-{
-	rpc_session_to_blob(ses, true);
+{	
+	blob_buf_init(&buf, 0);
+	rpc_session_to_blob(ses, &buf, true);
 
 	ubus_send_reply(ctx, req, buf.head);
+	blob_buf_free(&buf); 
 }
 
 static void
@@ -623,6 +624,7 @@ rpc_handle_access(struct ubus_context *ctx, struct ubus_object *obj,
 
 	ubus_send_reply(ctx, req, buf.head);
 
+	blob_buf_free(&buf); 
 	return 0;
 }
 
@@ -719,6 +721,7 @@ rpc_handle_get(struct ubus_context *ctx, struct ubus_object *obj,
 	blobmsg_close_table(&buf, c);
 	ubus_send_reply(ctx, req, buf.head);
 
+	blob_buf_free(&buf); 
 	return 0;
 }
 
@@ -1313,6 +1316,15 @@ int rpc_session_api_init(struct ubus_context *ctx)
 	return ubus_add_object(ctx, &obj);
 }
 
+
+void rpc_session_api_destroy(void){
+	struct rpc_session *ses, *nses; 
+	avl_for_each_element_safe(&sessions, ses, avl, nses){
+		rpc_session_destroy(ses); 
+	}	
+}
+
+
 bool rpc_session_access(const char *sid, const char *scope,
                         const char *object, const char *function)
 {
@@ -1351,8 +1363,10 @@ void rpc_session_freeze(void)
 			continue;
 
 		snprintf(path, sizeof(path) - 1, RPC_SESSION_DIRECTORY "/%s", ses->id);
-		rpc_session_to_blob(ses, false);
+		blob_buf_init(&buf, 0);
+		rpc_session_to_blob(ses, &buf, false);
 		rpc_blob_to_file(path, buf.head);
+		blob_buf_free(&buf); 
 	}
 }
 
