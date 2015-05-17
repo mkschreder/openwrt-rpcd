@@ -578,8 +578,9 @@ rpc_uci_getcommon(struct ubus_context *ctx, struct ubus_request_data *req,
 	ubus_send_reply(ctx, req, buf.head);
 
 out:
+	blob_buf_free(&buf); 
 	uci_unload(cursor, p);
-
+	
 	return rpc_uci_status();
 }
 
@@ -678,6 +679,7 @@ rpc_uci_add(struct ubus_context *ctx, struct ubus_object *obj,
 	ubus_send_reply(ctx, req, buf.head);
 
 out:
+	blob_buf_free(&buf); 
 	uci_unload(cursor, p);
 
 	return rpc_uci_status();
@@ -1054,6 +1056,7 @@ rpc_uci_changes(struct ubus_context *ctx, struct ubus_object *obj,
 		uci_unload(cursor, p);
 
 		ubus_send_reply(ctx, req, buf.head);
+		blob_buf_free(&buf); 
 
 		return rpc_uci_status();
 	}
@@ -1093,7 +1096,8 @@ rpc_uci_changes(struct ubus_context *ctx, struct ubus_object *obj,
 	blobmsg_close_table(&buf, c);
 
 	ubus_send_reply(ctx, req, buf.head);
-
+	
+	blob_buf_free(&buf); 
 	return 0;
 }
 
@@ -1113,6 +1117,7 @@ rpc_uci_trigger_event(struct ubus_context *ctx, const char *config)
 		blobmsg_add_string(&b, "package", pkg);
 		blobmsg_close_table(&b, c);
 		ubus_invoke(ctx, id, "event", b.head, NULL, 0, 1000);
+		blob_buf_free(&b); 
 	}
 	free(pkg);
 }
@@ -1136,11 +1141,11 @@ rpc_uci_revert_commit(struct ubus_context *ctx, struct blob_attr *msg, bool comm
 	if (!rpc_uci_write_access(tb[RPC_C_SESSION], tb[RPC_C_CONFIG]))
 		return UBUS_STATUS_PERMISSION_DENIED;
 
-	ptr.package = blobmsg_data(tb[RPC_C_CONFIG]);
+	char *config = blobmsg_data(tb[RPC_C_CONFIG]);
 
 	if (commit)
 	{
-		if (!uci_load(cursor, ptr.package, &p))
+		if (!uci_load(cursor, config, &p))
 		{
 			uci_commit(cursor, &p, false);
 			uci_unload(cursor, p);
@@ -1149,10 +1154,9 @@ rpc_uci_revert_commit(struct ubus_context *ctx, struct blob_attr *msg, bool comm
 	}
 	else
 	{
-		if (!uci_lookup_ptr(cursor, &ptr, NULL, true) && ptr.p)
-		{
+		if (!uci_lookup_ptr(cursor, &ptr, config, true) && ptr.p){
 			uci_revert(cursor, &ptr);
-			uci_unload(cursor, ptr.p);
+			uci_unload(cursor, ptr.p); 
 		}
 	}
 
@@ -1164,7 +1168,15 @@ rpc_uci_revert(struct ubus_context *ctx, struct ubus_object *obj,
                struct ubus_request_data *req, const char *method,
                struct blob_attr *msg)
 {
-	return rpc_uci_revert_commit(ctx, msg, false);
+	int ret = rpc_uci_revert_commit(ctx, msg, false);
+	blob_buf_init(&buf, 0);
+
+	blobmsg_add_u32(&buf, "code", ret);
+	
+	ubus_send_reply(ctx, req, buf.head);
+	
+	blob_buf_free(&buf); 
+	return ret;
 }
 
 static int
@@ -1172,7 +1184,15 @@ rpc_uci_commit(struct ubus_context *ctx, struct ubus_object *obj,
                struct ubus_request_data *req, const char *method,
                struct blob_attr *msg)
 {
-	return rpc_uci_revert_commit(ctx, msg, true);
+	int ret = rpc_uci_revert_commit(ctx, msg, false);
+	blob_buf_init(&buf, 0);
+
+	blobmsg_add_u32(&buf, "code", ret);
+	
+	ubus_send_reply(ctx, req, buf.head);
+	
+	blob_buf_free(&buf); 
+	return ret; 
 }
 
 static int
@@ -1199,6 +1219,8 @@ rpc_uci_configs(struct ubus_context *ctx, struct ubus_object *obj,
 	ubus_send_reply(ctx, req, buf.head);
 
 out:
+	blob_buf_free(&buf); 
+	free(configs); 
 	return rpc_uci_status();
 }
 
@@ -1562,4 +1584,9 @@ int rpc_uci_api_init(struct ubus_context *ctx)
 	rpc_session_destroy_cb(&cb);
 
 	return ubus_add_object(ctx, &obj);
+}
+
+void rpc_uci_api_destroy(void){
+	//blob_buf_free(&buf); 
+	uci_free_context(cursor); 
 }
