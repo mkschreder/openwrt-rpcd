@@ -31,6 +31,8 @@ static struct uloop_timeout apply_timer;
 static struct ubus_context *apply_ctx;
 static char apply_sid[RPC_SID_LEN + 1];
 
+#define DEBUG(...) printf(__VA_ARGS__)
+
 enum {
 	RPC_G_CONFIG,
 	RPC_G_SECTION,
@@ -1141,11 +1143,11 @@ rpc_uci_revert_commit(struct ubus_context *ctx, struct blob_attr *msg, bool comm
 	if (!rpc_uci_write_access(tb[RPC_C_SESSION], tb[RPC_C_CONFIG]))
 		return UBUS_STATUS_PERMISSION_DENIED;
 
-	char *config = blobmsg_data(tb[RPC_C_CONFIG]);
+	ptr.package = blobmsg_data(tb[RPC_C_CONFIG]);
 
 	if (commit)
 	{
-		if (!uci_load(cursor, config, &p))
+		if (!uci_load(cursor, ptr.package, &p))
 		{
 			uci_commit(cursor, &p, false);
 			uci_unload(cursor, p);
@@ -1154,7 +1156,7 @@ rpc_uci_revert_commit(struct ubus_context *ctx, struct blob_attr *msg, bool comm
 	}
 	else
 	{
-		if (!uci_lookup_ptr(cursor, &ptr, config, true) && ptr.p){
+		if (!uci_lookup_ptr(cursor, &ptr, NULL, true) && ptr.p){
 			uci_revert(cursor, &ptr);
 			uci_unload(cursor, ptr.p); 
 		}
@@ -1184,7 +1186,7 @@ rpc_uci_commit(struct ubus_context *ctx, struct ubus_object *obj,
                struct ubus_request_data *req, const char *method,
                struct blob_attr *msg)
 {
-	int ret = rpc_uci_revert_commit(ctx, msg, false);
+	int ret = rpc_uci_revert_commit(ctx, msg, true);
 	blob_buf_init(&buf, 0);
 
 	blobmsg_add_u32(&buf, "code", ret);
