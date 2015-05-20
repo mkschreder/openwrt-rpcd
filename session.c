@@ -620,7 +620,7 @@ rpc_handle_access(struct ubus_context *ctx, struct ubus_object *obj,
 	else
 	{
 		//rpc_session_dump_acls(ses, &buf);
-		rpc_session_dump(ses, ctx, req);
+		rpc_session_to_blob(ses, &buf, true);
 	}
 	
 	ubus_send_reply(ctx, req, buf.head);
